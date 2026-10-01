@@ -19,7 +19,7 @@ lagun-sim output8
 lagun-sim key --name hall          # a second key, with an identity of its own
 lagun-sim output --channels 4      # four relays on endpoints 4 … 7
 
-lagun-hub shell --config <the path the hub printed>   # or: lagun-hub tui
+lagun-hub tui --config <the path the hub printed>
 ```
 
 ### A key that switches a relay
