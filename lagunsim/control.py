@@ -87,7 +87,7 @@ class Control:
         self._held.clear()
         self.runner.power_cycle()
 
-    # --- the service button and the status LED (zadania/CR-05.md) ------------------------
+    # --- the service button and the status LED (zadania/zrobione/CR-05.md) ------------------------
 
     def service_button(self) -> None:
         """The service button held past its threshold and let go — a factory reset by the

@@ -145,7 +145,7 @@ def test_a_factory_reset_from_the_hub_reboots_the_device(tmp_path: Path) -> None
     assert any(line.startswith("1F") for line in sent(bus)), "it announces, as a new device"
 
 
-# --- the service button and the status LED (zadania/CR-05.md) ----------------------------
+# --- the service button and the status LED (zadania/zrobione/CR-05.md) ----------------------------
 
 
 def test_the_service_button_resets_the_device_as_the_hub_would(tmp_path: Path) -> None:
