@@ -24,7 +24,7 @@ from typing import Literal
 from lagunbus_node.faults import Faults, FaultyTransport
 from lagunbus_node.frame import Frame
 from lagunbus_node.interfaces import Transport
-from lagunbus_node.sim import SimDevice
+from lagunbus_node.sim import RESET_REASONS, SimDevice
 
 from lagunsim.state import State
 
@@ -72,12 +72,17 @@ class Runner:
         self.pins = device.inputs_idle
         self._saved_version = -1
 
-    def power_cycle(self, why: str = "power cut") -> None:
+    def power_cycle(self, why: str = "power cut", reason: str = "POWER_ON") -> None:
         """A new node from the same identity and channels, and the store as the old one
         last saved it — RAM is gone, as on a board. Pins go back to idle: a finger on a
-        button does not survive a reboot of the screen it is drawn on."""
+        button does not survive a reboot of the screen it is drawn on.
+
+        `reason` is what `esp_reset_reason()` would say on the board — `LastResetReason`
+        in the new node's `Booted`: POWER_ON for a pulled plug, SOFTWARE after the node's
+        own restart."""
         old = self.device
         new = SimDevice(old.name, old.uid, jitter=secrets.randbits(32), channels=old.channels)
+        new.set_reset_reason(RESET_REASONS[reason])
         old.close()
         self.replace(new)
         if self.on_restart is not None:
@@ -128,7 +133,10 @@ class Runner:
         self.device.loop(self.pins)
         self._flush()
         if self.device.restart_requested:
-            self.power_cycle("restart — FactoryReset")
+            # The same restart after both; the stored address tells them apart.
+            wiped = self.device.store_get("address") in (None, b"\x00\x00")
+            what = "FactoryReset" if wiped else "Reboot"
+            self.power_cycle(f"restart — {what}", reason="SOFTWARE")
 
     def _flush(self) -> None:
         for frame in self.device.take_tx():

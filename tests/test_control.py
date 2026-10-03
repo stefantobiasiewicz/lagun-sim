@@ -145,7 +145,52 @@ def test_a_factory_reset_from_the_hub_reboots_the_device(tmp_path: Path) -> None
     assert any(line.startswith("1F") for line in sent(bus)), "it announces, as a new device"
 
 
-# --- faults ----------------------------------------------------------------------------
+# --- the service button and the status LED (zadania/CR-05.md) ----------------------------
+
+
+def test_the_service_button_resets_the_device_as_the_hub_would(tmp_path: Path) -> None:
+    """`s` in the view: the button held past its threshold and let go. RESETTING at once,
+    50 ms later the same restart as after FactoryReset from the hub."""
+    state = State.open("relay", "output", fresh=False, root=tmp_path, uid=UID)
+    control, bus, clock = rig("output", state)
+    restarts: list[str] = []
+    control.runner.on_restart = restarts.append
+    control.service_button()
+    assert control.status == "RESETTING"
+    assert sent(bus) == [], "the button puts nothing on the bus"
+    run(control, clock, 60)
+    assert restarts == ["restart — FactoryReset"]
+    assert control.runner.device.address == 0
+    assert control.status == "NO_ADDRESS"
+
+
+def test_a_reboot_keeps_the_address_and_comes_back_as_software(tmp_path: Path) -> None:
+    state = State.open("relay", "output", fresh=False, root=tmp_path, uid=UID)
+    control, bus, clock = rig("output", state)
+    restarts: list[str] = []
+    control.runner.on_restart = restarts.append
+    bus.inbox.append(Frame(0x06108001, bytes.fromhex("013200")))  # Reboot, 50 ms
+    run(control, clock, 60)
+    lines = sent(bus)
+    assert lines[0] == "0E108001#01"
+    assert restarts == ["restart — Reboot"]
+    assert control.runner.device.address == 0x042
+    assert "02108001#000300010000" in lines, "Booted with LastResetReason SOFTWARE"
+
+
+def test_a_power_cut_comes_back_as_power_on(state: State) -> None:
+    control, bus, _ = rig("key", state)
+    control.power_cycle()
+    assert sent(bus) == ["02108001#000000010000"]
+
+
+def test_the_led_shows_the_state_with_the_librarys_pattern(state: State) -> None:
+    """READY is lit, with a dark blip every 3 s (lagunbus/tools/led.h)."""
+    control, _, clock = rig("key", state)
+    run(control, clock, 10)
+    assert control.status == "READY" and control.led
+    run(control, clock, 2900)
+    assert not control.led
 
 
 def faulty_relay(tmp_path: Path) -> tuple[Control, QueueTransport, Clock]:

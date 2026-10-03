@@ -9,6 +9,7 @@ a Raspberry Pi. The view only draws and forwards; what a click or a hold means i
     │                                                                      │
     │  inputs   [ 1 ]  [ 2 ]  [ 3 ]        ← mouse: press and hold          │
     │  outputs  ● 1  ○ 2  ○ 3 …                                            │
+    │  status   ● READY                    ← the status LED, blinking       │
     │                                                                      │
     │ [  12.345] → EVENT  0x002 ep5 el 0x03  [00 01]                       │
     │ …                                                                    │
@@ -171,6 +172,9 @@ class View:
             c.toggle_hold(self.selected)
         elif key == ord("p"):
             c.power_cycle()
+        elif key == ord("s"):
+            c.service_button()
+            self.log.note("service button: held, let go — factory reset")
         elif key == curses.KEY_MOUSE:
             self._mouse()
         return True
@@ -239,6 +243,14 @@ class View:
                 _put(screen, y, 11 + i * BUTTON_W, lamp, width, self._on if on else curses.A_DIM)
             y += 1
 
+        # The LED blinks by the library's own pattern; the state is written next to it,
+        # since a terminal redrawn 25 times a second shows a 100 ms flash only barely.
+        lit = self.control.led
+        _put(screen, y, 1, "status", width)
+        lamp = f"{'●' if lit else '○'} {self.control.status or '—'}"
+        _put(screen, y, 11, lamp, width, self._on if lit else curses.A_DIM)
+        y += 1
+
         armed = self.control.faults_armed()
         if armed:
             _put(screen, y, 1, "faults   " + " · ".join(armed), width, curses.A_BOLD)
@@ -258,10 +270,10 @@ class View:
         elif self.control.inputs:
             keys = (
                 " 1-9 click · ←→ pick · Enter click · d double · t triple · space hold"
-                " · mouse: press & hold · f faults · p power cut · q quit"
+                " · mouse: press & hold · s service · f faults · p power cut · q quit"
             )
         else:
-            keys = " f faults · p power cut · q quit"
+            keys = " s service · f faults · p power cut · q quit"
         _put(screen, help_y, 0, keys, width, curses.A_REVERSE)
         screen.refresh()
 

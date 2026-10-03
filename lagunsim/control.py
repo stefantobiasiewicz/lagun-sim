@@ -87,6 +87,24 @@ class Control:
         self._held.clear()
         self.runner.power_cycle()
 
+    # --- the service button and the status LED (zadania/CR-05.md) ------------------------
+
+    def service_button(self) -> None:
+        """The service button held past its threshold and let go — a factory reset by the
+        device itself. The hold is the board's (`lagunbus/tools/service.h`, tested in C);
+        here one key stands for all of it."""
+        self.runner.device.service_press()
+
+    @property
+    def status(self) -> str | None:
+        """The state the node last reported for its LED — `"READY"`, `"NO_ADDRESS"`, …"""
+        return self.runner.device.state
+
+    @property
+    def led(self) -> bool:
+        """Whether the status LED is lit right now, by the library's pattern."""
+        return self.runner.device.led
+
     # --- faults --------------------------------------------------------------------------
     #
     # The overlay of the node library (`lagunbus_node.faults`): between the node and the

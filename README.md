@@ -94,7 +94,8 @@ Buttons for the inputs, lamps for the outputs, the device's traffic below.
 | `space` | press the picked input and keep it pressed; again to let go (`*` marks it) |
 | mouse | press on a button and hold — released when you let go |
 | `f` | faults, then: `r` lose the next response, `b` answer the next request `BUSY`, `s` fall silent for 10 s, `g` lose a segment of the next long response, `c` clear. The overlay of `lagunbus_node.faults`: the node knows nothing, the hub sees it all — the device's own log does not show what was answered or lost in its name |
-| `p` | power cut: a new node from the same Uid and the stored state; RAM is gone. A `FactoryReset` from the hub does the same by itself, as `esp_restart()` on a board |
+| `p` | power cut: a new node from the same Uid and the stored state; RAM is gone. A `FactoryReset` or `Reboot` from the hub does the same by itself, as `esp_restart()` on a board — the new node's `Booted` says `SOFTWARE` instead of `POWER_ON` |
+| `s` | the service button, held past its threshold and let go: a factory reset by the device itself, as from the hub but with nothing on the bus. The `status` line shows the status LED — the node's state and the library's blink pattern (`lagunbus/tools/led.h`) |
 | `q` | quit — also a power cut, as far as the device is concerned |
 
 A terminal reports a key being typed, never released, so a keyboard click is a press
