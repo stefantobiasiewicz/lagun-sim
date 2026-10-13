@@ -272,12 +272,12 @@ def test_the_screen_shows_what_each_display_field_shows(state: State) -> None:
 
 
 def test_a_sensor_starts_with_a_room_reading(state: State) -> None:
-    """A sensor measures from power-on: 21.50 °C and 45.00 % go out at the first turn
-    (types/0x0030-sense.md; zadania/zrobione/FEAT-13.md)."""
+    """A sensor measures from power-on: 21.50 °C, 45.00 % and 300 lx go out at the first
+    turn (types/0x0030-sense.md; zadania/zrobione/FEAT-13.md, zadania/zrobione/DEVICE-01.md)."""
     control, bus, clock = rig("env", state)
     run(control, clock, 5)
-    assert sent(bus) == ["10108400#6608", "10108500#9411"]
-    assert control.sensors == ["ep4  21.50 °C", "ep5  45.00 %"]
+    assert sent(bus) == ["10108400#6608", "10108500#9411", "10108600#30750000"]
+    assert control.sensors == ["ep4  21.50 °C", "ep5  45.00 %", "ep6  300.00 lx"]
 
 
 def test_plus_and_minus_move_the_reading_by_a_step(state: State) -> None:
@@ -288,7 +288,23 @@ def test_plus_and_minus_move_the_reading_by_a_step(state: State) -> None:
     control.sense_step(1, -1)
     run(control, clock, 5)
     assert sent(bus) == ["10108400#9808", "10108500#CC10"], "22.00 °C, 43.00 %"
-    assert control.sensors == ["ep4  22.00 °C", "ep5  43.00 %"]
+    assert control.sensors[:2] == ["ep4  22.00 °C", "ep5  43.00 %"]
+
+
+def test_light_moves_by_ten_percent(state: State) -> None:
+    """Light spans orders of magnitude, and so does its hysteresis (types/0x0030-sense.md
+    §5.3): a fixed step would be either nothing in sunlight or everything at dusk. Ten
+    per cent of the reading, at least 1 lx (DEVICE-01 N8)."""
+    control, _, _ = rig("env", state)
+    control.sense_step(2, +1)
+    assert control.sensors[2] == "ep6  330.00 lx"
+    control.sense_step(2, -1)
+    assert control.sensors[2] == "ep6  297.00 lx"
+    for _ in range(80):
+        control.sense_step(2, -1)
+    assert control.sensors[2] == "ep6  0.00 lx"
+    control.sense_step(2, +1)
+    assert control.sensors[2] == "ep6  1.00 lx"
 
 
 def test_humidity_stays_within_0_to_100(state: State) -> None:

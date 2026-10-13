@@ -59,11 +59,15 @@ class Reading(NamedTuple):
     start: int
     lo: int
     hi: int
+    percent: int = 0
+    """A step of this much of the reading when it is more than `step` — for light, which
+    spans orders of magnitude (DEVICE-01 N8)."""
 
 
 _READINGS: Final = {
     0x00: Reading(2, "°C", 50, 2150, -4000, 8500),  # a room; the SHT40's range
     0x01: Reading(2, "%", 200, 4500, 0, 10000),
+    0x02: Reading(2, "lx", 100, 30000, 0, 12000000, percent=10),  # the VEML7700's range
 }
 _ANY: Final = Reading(0, "", 1, 0, -(2**31), 2**31 - 1)
 """A quantity no simulated sensor measures yet — raw numbers, step 1."""
@@ -177,7 +181,8 @@ class Control:
         sensor = sensors[index]
         r = _READINGS.get(sensor.quantity, _ANY)
         now = self._reading(sensor.endpoint, sensor.quantity)
-        self._readings[sensor.endpoint] = max(r.lo, min(r.hi, now + direction * r.step))
+        step = max(r.step, abs(now) * r.percent // 100)
+        self._readings[sensor.endpoint] = max(r.lo, min(r.hi, now + direction * step))
         self._feed()
 
     def sense_fail(self, index: int) -> None:

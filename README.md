@@ -38,7 +38,8 @@ the first time a name is used; after that the name keeps it.
 
 ### A sensor on a display
 
-`env` is a room sensor — a temperature on ep4 and a humidity on ep5 (`Sense`); the hub's
+`env` is the board `devices/apps/env` — a temperature on ep4, a humidity on ep5 and a
+light on ep6 (`Sense` with `MIN_MAX`, `THRESHOLD` and `Offset`); the hub's
 example configuration writes both onto `kitchen-display` (`display`), each report of
 the sensor a write of the field (`hub/KONFIGURACJA.md` §5, `zadania/zrobione/FEAT-13.md`):
 
@@ -49,7 +50,8 @@ lagun-sim env     --uid 2021222324252627 --name kitchen-env
 ```
 
 `+` on the sensor — the display follows once the change passes the hysteresis (0.20 °C,
-1.00 %); `x` — the sensor fails and the field shows `--`. In IntelliJ the hub's run
+1.00 %); light moves by 10 % a press and reports past 50 lx or 10 %, whichever is more
+(`zadania/zrobione/DEVICE-01.md` N2, N8); `x` — the sensor fails and the field shows `--`. In IntelliJ the hub's run
 configuration `0c · Stack: hub + env + display` starts all three.
 
 `lagun-sim` with no arguments lists the devices. The list is `c/sim/devices.c` in the
