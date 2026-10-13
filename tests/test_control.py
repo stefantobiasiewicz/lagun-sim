@@ -269,3 +269,57 @@ def test_the_screen_shows_what_each_display_field_shows(state: State) -> None:
     )
     run(control, clock, 5)
     assert control.screen == ["ep4  2137 TEMPERATURE", 'ep5  "wietrz"', "ep6  --"]
+
+
+def test_a_sensor_starts_with_a_room_reading(state: State) -> None:
+    """A sensor measures from power-on: 21.50 °C and 45.00 % go out at the first turn
+    (types/0x0030-sense.md; zadania/zrobione/FEAT-13.md)."""
+    control, bus, clock = rig("env", state)
+    run(control, clock, 5)
+    assert sent(bus) == ["10108400#6608", "10108500#9411"]
+    assert control.sensors == ["ep4  21.50 °C", "ep5  45.00 %"]
+
+
+def test_plus_and_minus_move_the_reading_by_a_step(state: State) -> None:
+    control, bus, clock = rig("env", state)
+    run(control, clock, 5)
+    bus.take()
+    control.sense_step(0, +1)
+    control.sense_step(1, -1)
+    run(control, clock, 5)
+    assert sent(bus) == ["10108400#9808", "10108500#CC10"], "22.00 °C, 43.00 %"
+    assert control.sensors == ["ep4  22.00 °C", "ep5  43.00 %"]
+
+
+def test_humidity_stays_within_0_to_100(state: State) -> None:
+    control, _, clock = rig("env", state)
+    for _ in range(40):
+        control.sense_step(1, +1)
+    run(control, clock, 5)
+    assert control.sensors[1] == "ep5  100.00 %"
+
+
+def test_x_fails_the_sensor_and_brings_it_back(state: State) -> None:
+    """A failed reading is "absent" on the bus, dashes here — never a zero (§5.2)."""
+    control, bus, clock = rig("env", state)
+    run(control, clock, 5)
+    bus.take()
+    control.sense_fail(0)
+    run(control, clock, 5)
+    assert sent(bus) == ["10108400#0080"]
+    assert control.sensors[0] == "ep4  -- failed"
+    control.sense_fail(0)
+    run(control, clock, 5)
+    assert sent(bus) == ["10108400#6608"]
+
+
+def test_a_power_cut_keeps_the_reading(state: State) -> None:
+    """The room did not change because the sensor rebooted: the new node measures what the
+    old one did."""
+    control, bus, clock = rig("env", state)
+    control.sense_step(0, +1)
+    run(control, clock, 5)
+    control.power_cycle()
+    bus.take()
+    run(control, clock, 5)
+    assert "10108400#9808" in sent(bus)

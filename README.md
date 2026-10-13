@@ -36,6 +36,22 @@ lagun-sim key    --uid 0001020304050607 --name kitchen-switch
 Click the key (`1`) — the relay's lamp goes on; again — off. `--uid` fixes the identity
 the first time a name is used; after that the name keeps it.
 
+### A sensor on a display
+
+`env` is a room sensor — a temperature on ep4 and a humidity on ep5 (`Sense`); the hub's
+example configuration writes both onto `kitchen-display` (`display`), each report of
+the sensor a write of the field (`hub/KONFIGURACJA.md` §5, `zadania/zrobione/FEAT-13.md`):
+
+```sh
+lagun-hub run --udp --ephemeral --accept-new --config config/     # in hub/
+lagun-sim display --uid 1011121314151617 --name kitchen-display
+lagun-sim env     --uid 2021222324252627 --name kitchen-env
+```
+
+`+` on the sensor — the display follows once the change passes the hysteresis (0.20 °C,
+1.00 %); `x` — the sensor fails and the field shows `--`. In IntelliJ the hub's run
+configuration `0c · Stack: hub + env + display` starts all three.
+
 `lagun-sim` with no arguments lists the devices. The list is `c/sim/devices.c` in the
 node library — the same list the conformance scenarios run on, so every device here is
 one the tests check.
@@ -86,7 +102,8 @@ root.
 
 Buttons for the inputs, lamps for the outputs, what each display field shows (`display`:
 a raw number with its quantity, a text in quotes, `--` for nothing — the scale and unit
-are a real device's to draw), the device's traffic below. Write to a field from the hub's
+are a real device's to draw), what each sensor reads (`env`: in its unit, `-- failed`
+after `x`), the device's traffic below. Write to a field from the hub's
 view: `Value` straight, `Text` goes as a `LONG_WRITE`.
 
 | | |
@@ -96,6 +113,8 @@ view: `Value` straight, `Text` goes as a `LONG_WRITE`.
 | `d`, `t` | double, triple click on the picked input |
 | `space` | press the picked input and keep it pressed; again to let go (`*` marks it) |
 | mouse | press on a button and hold — released when you let go |
+| `↑` `↓`, `+` `−` | pick a sensor, move its reading by a step (0.50 °C, 2.00 %). A sensor measures what it is set to from power-on — 21.50 °C, 45.00 % — and keeps it across a power cut, as the room does; when a report goes out is the library's (hysteresis, the 60 s cycle) |
+| `x` | the picked sensor fails — `Value` absent on the bus — and comes back on the next `x` |
 | `f` | faults, then: `r` lose the next response, `b` answer the next request `BUSY`, `s` fall silent for 10 s, `g` lose a segment of the next long response, `c` clear. The overlay of `lagunbus_node.faults`: the node knows nothing, the hub sees it all — the device's own log does not show what was answered or lost in its name |
 | `p` | power cut: a new node from the same Uid and the stored state; RAM is gone. A `FactoryReset` or `Reboot` from the hub does the same by itself, as `esp_restart()` on a board — the new node's `Booted` says `SOFTWARE` instead of `POWER_ON` |
 | `s` | the service button, held past its threshold and let go: a factory reset by the device itself, as from the hub but with nothing on the bus. The `status` line shows the status LED — the node's state and the library's blink pattern (`lagunbus/tools/led.h`) |

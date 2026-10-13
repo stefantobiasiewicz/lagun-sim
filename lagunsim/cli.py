@@ -189,17 +189,27 @@ def _headless(device: SimDevice, bus: Transport, state: State, args: argparse.Na
     where = "temporary, removed at exit" if state.temporary else str(state.directory)
     print(f"{args.device} as {args.name or args.device!r} on {args.bus}", flush=True)
     print(f"  Uid {state.uid.hex()}  ShortId 0x{device.short_id:08X}  state: {where}")
-    print(f"  inputs {device.input_count}, outputs {device.output_count}", flush=True)
+    print(
+        f"  inputs {device.input_count}, outputs {device.output_count}, "
+        f"sensors {len(device.sensors)}",
+        flush=True,
+    )
 
     stop = threading.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, lambda *_: stop.set())
 
+    # Through `Control` as the view does, not `runner.step()`: a sensor measures from
+    # power-on, and the readings it hands the node live there — without it `env` runs
+    # headless and never reports anything.
+    from lagunsim.control import Control
+
+    control = Control(runner)
     runner.start()
     address = runner.device.address
     print(f"  address {_address(address)}", flush=True)
     while not stop.is_set():
-        runner.step()
+        control.tick()
         if runner.device.address != address:
             address = runner.device.address
             print(f"  address {_address(address)}", flush=True)

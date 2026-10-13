@@ -1,5 +1,5 @@
 """The terminal view — buttons for the inputs, lamps for the outputs, the display fields,
-the traffic below.
+the sensors' readings, the traffic below.
 
 `curses` from the standard library, as the hub's own view: no dependency to install on
 a Raspberry Pi. The view only draws and forwards; what a click or a hold means is in
@@ -11,6 +11,7 @@ a Raspberry Pi. The view only draws and forwards; what a click or a hold means i
     │  inputs   [ 1 ]  [ 2 ]  [ 3 ]        ← mouse: press and hold          │
     │  outputs  ● 1  ○ 2  ○ 3 …                                            │
     │  display  ep4  2137 TEMPERATURE      ← what each field shows          │
+    │  sensors  ▸ ep4  21.50 °C            ← ↑↓ pick, + − change, x fail    │
     │  status   ● READY                    ← the status LED, blinking       │
     │                                                                      │
     │ [  12.345] → EVENT  0x002 ep5 el 0x03  [00 01]                       │
@@ -86,6 +87,8 @@ class View:
         self.header = header
         self.log = log
         self.selected = 0
+        self.sensor = 0
+        """The sensor `+`, `−` and `x` act on."""
         self._buttons_y = -1
         self._buttons_x = 0
         self._mouse_down: int | None = None
@@ -172,6 +175,16 @@ class View:
             c.click(self.selected, times=3)
         elif key == ord(" "):
             c.toggle_hold(self.selected)
+        elif key == curses.KEY_UP:
+            self.sensor = max(self.sensor - 1, 0)
+        elif key == curses.KEY_DOWN:
+            self.sensor = min(self.sensor + 1, max(c.sensor_count - 1, 0))
+        elif key in (ord("+"), ord("=")):
+            c.sense_step(self.sensor, +1)
+        elif key in (ord("-"), ord("_")):
+            c.sense_step(self.sensor, -1)
+        elif key == ord("x"):
+            c.sense_fail(self.sensor)
         elif key == ord("p"):
             c.power_cycle()
         elif key == ord("s"):
@@ -250,6 +263,12 @@ class View:
             _put(screen, y, 11, line, width, curses.A_BOLD)
             y += 1
 
+        for i, line in enumerate(self.control.sensors):
+            _put(screen, y, 1, "sensors" if i == 0 else "", width)
+            mark = "▸ " if i == self.sensor else "  "
+            _put(screen, y, 11, mark + line, width, curses.A_BOLD)
+            y += 1
+
         # The LED blinks by the library's own pattern; the state is written next to it,
         # since a terminal redrawn 25 times a second shows a 100 ms flash only barely.
         lit = self.control.led
@@ -278,6 +297,11 @@ class View:
             keys = (
                 " 1-9 click · ←→ pick · Enter click · d double · t triple · space hold"
                 " · mouse: press & hold · s service · f faults · p power cut · q quit"
+            )
+        elif self.control.sensor_count:
+            keys = (
+                " ↑↓ pick sensor · + − change · x sensor fails / comes back"
+                " · s service · f faults · p power cut · q quit"
             )
         else:
             keys = " s service · f faults · p power cut · q quit"

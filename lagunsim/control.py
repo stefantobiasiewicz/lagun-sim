@@ -13,7 +13,7 @@ from __future__ import annotations
 import heapq
 import itertools
 from collections.abc import Callable
-from typing import Final
+from typing import Final, NamedTuple
 
 from lagunsim.runner import Runner
 
@@ -48,12 +48,40 @@ _QUANTITIES: Final = {
 """`Quantity` by name (types/0x0030-sense.md §2.3) — for a label only."""
 
 
+class Reading(NamedTuple):
+    """How a person turns a quantity's knob: decimals and unit for the label, the step of
+    `+`/`−`, where a fresh sensor starts and the range it stays in — all in the units on
+    the wire (`registry/quantities.yaml`)."""
+
+    decimals: int
+    unit: str
+    step: int
+    start: int
+    lo: int
+    hi: int
+
+
+_READINGS: Final = {
+    0x00: Reading(2, "°C", 50, 2150, -4000, 8500),  # a room; the SHT40's range
+    0x01: Reading(2, "%", 200, 4500, 0, 10000),
+}
+_ANY: Final = Reading(0, "", 1, 0, -(2**31), 2**31 - 1)
+"""A quantity no simulated sensor measures yet — raw numbers, step 1."""
+
+
 class Control:
     def __init__(self, runner: Runner) -> None:
         self.runner = runner
         self._plan: list[tuple[int, int, Callable[[], None]]] = []
         self._order = itertools.count()
         self._held: set[int] = set()
+        self._readings: dict[int, int] = {}
+        """What each sensor measures, by endpoint — the room, kept by the person, not by
+        the node: it survives a power cut, as the temperature does."""
+        self._failed: set[int] = set()
+        self._fed: object = None
+        """The node the readings were last handed to; a new one after a power cut gets
+        them again at its first turn."""
 
     @property
     def inputs(self) -> int:
@@ -130,6 +158,62 @@ class Control:
             lines.append(f"ep{field.endpoint}  {what}")
         return lines
 
+    # --- sensors (types/0x0030-sense.md) ---------------------------------------------
+    #
+    # A board's application reads its sensor and hands the result to the library; here a
+    # person sets what the sensor reads. When a report goes out — hysteresis, the cycle —
+    # is the library's business, so `+` by less than the hysteresis is quiet on the bus,
+    # as a real sensor's noise is.
+
+    @property
+    def sensor_count(self) -> int:
+        return len(self.runner.device.sensors)
+
+    def sense_step(self, index: int, direction: int) -> None:
+        """`+` or `−` on sensor `index`: one step of its quantity, within its range."""
+        sensors = self.runner.device.sensors
+        if not 0 <= index < len(sensors):
+            return
+        sensor = sensors[index]
+        r = _READINGS.get(sensor.quantity, _ANY)
+        now = self._reading(sensor.endpoint, sensor.quantity)
+        self._readings[sensor.endpoint] = max(r.lo, min(r.hi, now + direction * r.step))
+        self._feed()
+
+    def sense_fail(self, index: int) -> None:
+        """The sensor stops answering — or answers again, with the reading it had."""
+        sensors = self.runner.device.sensors
+        if not 0 <= index < len(sensors):
+            return
+        self._failed ^= {sensors[index].endpoint}
+        self._feed()
+
+    @property
+    def sensors(self) -> list[str]:
+        """What each sensor reads, one line a sensor: `ep4  21.50 °C`, `ep5  -- failed`."""
+        lines = []
+        for sensor in self.runner.device.sensors:
+            if sensor.endpoint in self._failed:
+                what = "-- failed"
+            else:
+                r = _READINGS.get(sensor.quantity, _ANY)
+                value = self._reading(sensor.endpoint, sensor.quantity)
+                what = f"{value / 10**r.decimals:.{r.decimals}f} {r.unit}".rstrip()
+            lines.append(f"ep{sensor.endpoint}  {what}")
+        return lines
+
+    def _reading(self, endpoint: int, quantity: int) -> int:
+        return self._readings.setdefault(endpoint, _READINGS.get(quantity, _ANY).start)
+
+    def _feed(self) -> None:
+        """Hand every reading to the node — what a board's loop does after measuring."""
+        device = self.runner.device
+        for sensor in device.sensors:
+            failed = sensor.endpoint in self._failed
+            raw = None if failed else self._reading(sensor.endpoint, sensor.quantity)
+            device.sense(sensor.endpoint, raw)
+        self._fed = device
+
     @property
     def status(self) -> str | None:
         """The state the node last reported for its LED — `"READY"`, `"NO_ADDRESS"`, …"""
@@ -193,6 +277,8 @@ class Control:
         while self._plan and _due(self._plan[0][0], now):
             _, _, action = heapq.heappop(self._plan)
             action()
+        if self._fed is not self.runner.device and self.runner.device.sensors:
+            self._feed()  # a node just powered on measures at once
         self.runner.step()
 
     def _at(self, when: int, action: Callable[[], None]) -> None:
