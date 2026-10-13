@@ -271,6 +271,27 @@ def test_the_screen_shows_what_each_display_field_shows(state: State) -> None:
     assert control.screen == ["ep4  2137 TEMPERATURE", 'ep5  "wietrz"', "ep6  --"]
 
 
+def test_an_epaper_shows_its_glass_and_says_when_it_lags(state: State) -> None:
+    """`epd` (zadania/zrobione/DEVICE-04.md, N9): the places as the glass shows them, the
+    unit printed on the glass beside them, and a line while the glass waits for its
+    refresh — the board's pacing, from the library."""
+    control, bus, clock = rig("epd", state)
+    run(control, clock, 5)
+    assert control.screen == ["ep4   --.- °C", "ep5  --.- %"], "cleared: dashes"
+    bus.inbox.append(Frame(0x0A108402, bytes([1]) + (2137).to_bytes(2, "little")))
+    run(control, clock, 5)
+    assert control.screen == ["ep4   21.4 °C", "ep5  --.- %"], "at once: no number before"
+    bus.inbox.append(Frame(0x0A108502, bytes([2]) + (4550).to_bytes(2, "little")))
+    run(control, clock, 5)
+    assert control.screen == [
+        "ep4   21.4 °C",
+        "ep5  --.- %",
+        "     the glass waits for its refresh",
+    ]
+    run(control, clock, 60_000)
+    assert control.screen == ["ep4   21.4 °C", "ep5  45.5 %"]
+
+
 def test_a_sensor_starts_with_a_room_reading(state: State) -> None:
     """A sensor measures from power-on: 21.50 °C, 45.00 % and 300 lx go out at the first
     turn (types/0x0030-sense.md; zadania/zrobione/FEAT-13.md, zadania/zrobione/DEVICE-01.md)."""

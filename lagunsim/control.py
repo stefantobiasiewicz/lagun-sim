@@ -150,16 +150,27 @@ class Control:
         """What each display field shows (types/0x0022-display.md), one line a field:
         `ep4  2137 TEMPERATURE`, `ep5  "Pranie gotowe"`, `ep6  --`. The number is the raw
         one: its scale and unit are the quantity's, and drawing them belongs to the device
-        that has them printed on its glass (zadania/devices/DEVICE-04.md, N9)."""
+        that has them printed on its glass.
+
+        A device with such a glass — the e-paper `epd` — shows what the glass shows, in its
+        places, with the unit printed beside them (`ep4   21.4 °C`), and a line of its own
+        while a change waits for the next refresh (zadania/zrobione/DEVICE-04.md, N9). The
+        places and the pacing are the library's, the board's own."""
         lines = []
-        for field in self.runner.device.display_fields:
-            if field.content == "VALUE" and field.value is not None:
+        device = self.runner.device
+        for field in device.display_fields:
+            if field.glass is not None:
+                unit = _READINGS.get(field.quantity or 0, _ANY).unit
+                what = f"{field.glass} {unit}".rstrip()
+            elif field.content == "VALUE" and field.value is not None:
                 what = f"{field.value} {_QUANTITIES.get(field.quantity or 0, field.quantity)}"
             elif field.content == "TEXT":
                 what = f'"{field.text}"'
             else:
                 what = "--"  # nothing to show — never a zero (§5.2)
             lines.append(f"ep{field.endpoint}  {what}")
+        if device.display_pending:
+            lines.append("     the glass waits for its refresh")
         return lines
 
     # --- sensors (types/0x0030-sense.md) ---------------------------------------------
