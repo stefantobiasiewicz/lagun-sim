@@ -84,7 +84,10 @@ root.
 
 ## The view
 
-Buttons for the inputs, lamps for the outputs, the device's traffic below.
+Buttons for the inputs, lamps for the outputs, what each display field shows (`display`:
+a raw number with its quantity, a text in quotes, `--` for nothing — the scale and unit
+are a real device's to draw), the device's traffic below. Write to a field from the hub's
+view: `Value` straight, `Text` goes as a `LONG_WRITE`.
 
 | | |
 |---|---|

@@ -30,6 +30,24 @@ SILENCE_MS: Final = 10_000
 node for good."""
 
 
+_QUANTITIES: Final = {
+    0x00: "TEMPERATURE",
+    0x01: "HUMIDITY",
+    0x02: "ILLUMINANCE",
+    0x03: "CO2",
+    0x04: "VOC",
+    0x05: "PM25",
+    0x06: "PRESSURE",
+    0x07: "FLOW",
+    0x08: "SOIL_MOISTURE",
+    0x09: "VOLTAGE",
+    0x0A: "CURRENT",
+    0x0B: "POWER",
+    0x0C: "DISTANCE",
+}
+"""`Quantity` by name (types/0x0030-sense.md §2.3) — for a label only."""
+
+
 class Control:
     def __init__(self, runner: Runner) -> None:
         self.runner = runner
@@ -94,6 +112,23 @@ class Control:
         device itself. The hold is the board's (`lagunbus/tools/service.h`, tested in C);
         here one key stands for all of it."""
         self.runner.device.service_press()
+
+    @property
+    def screen(self) -> list[str]:
+        """What each display field shows (types/0x0022-display.md), one line a field:
+        `ep4  2137 TEMPERATURE`, `ep5  "Pranie gotowe"`, `ep6  --`. The number is the raw
+        one: its scale and unit are the quantity's, and drawing them belongs to the device
+        that has them printed on its glass (zadania/devices/DEVICE-04.md, N9)."""
+        lines = []
+        for field in self.runner.device.display_fields:
+            if field.content == "VALUE" and field.value is not None:
+                what = f"{field.value} {_QUANTITIES.get(field.quantity or 0, field.quantity)}"
+            elif field.content == "TEXT":
+                what = f'"{field.text}"'
+            else:
+                what = "--"  # nothing to show — never a zero (§5.2)
+            lines.append(f"ep{field.endpoint}  {what}")
+        return lines
 
     @property
     def status(self) -> str | None:

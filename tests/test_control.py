@@ -253,3 +253,19 @@ def test_clear_disarms_everything(tmp_path: Path) -> None:
     assert len(control.faults_armed()) == 4
     control.clear_faults()
     assert control.faults_armed() == []
+
+
+def test_the_screen_shows_what_each_display_field_shows(state: State) -> None:
+    """A number, a text, and dashes for nothing (types/0x0022-display.md; FEAT-12)."""
+    control, bus, clock = rig("display", state)
+    assert control.screen == ["ep4  --", "ep5  --", "ep6  --"]
+    text = bytes([6]) + b"wietrz"
+    bus.inbox.extend(
+        [
+            Frame(0x0A108402, bytes([1]) + (2137).to_bytes(2, "little")),
+            Frame(0x14108504, bytes([0x02, 0]) + text[:6]),
+            Frame(0x14108504, bytes([0x82, 1]) + text[6:]),
+        ]
+    )
+    run(control, clock, 5)
+    assert control.screen == ["ep4  2137 TEMPERATURE", 'ep5  "wietrz"', "ep6  --"]

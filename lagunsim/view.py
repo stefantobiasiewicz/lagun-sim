@@ -1,4 +1,5 @@
-"""The terminal view — buttons for the inputs, lamps for the outputs, the traffic below.
+"""The terminal view — buttons for the inputs, lamps for the outputs, the display fields,
+the traffic below.
 
 `curses` from the standard library, as the hub's own view: no dependency to install on
 a Raspberry Pi. The view only draws and forwards; what a click or a hold means is in
@@ -9,6 +10,7 @@ a Raspberry Pi. The view only draws and forwards; what a click or a hold means i
     │                                                                      │
     │  inputs   [ 1 ]  [ 2 ]  [ 3 ]        ← mouse: press and hold          │
     │  outputs  ● 1  ○ 2  ○ 3 …                                            │
+    │  display  ep4  2137 TEMPERATURE      ← what each field shows          │
     │  status   ● READY                    ← the status LED, blinking       │
     │                                                                      │
     │ [  12.345] → EVENT  0x002 ep5 el 0x03  [00 01]                       │
@@ -241,6 +243,11 @@ class View:
                 on = device.output_on(i)
                 lamp = f"{'●' if on else '○'} {i + 1}"
                 _put(screen, y, 11 + i * BUTTON_W, lamp, width, self._on if on else curses.A_DIM)
+            y += 1
+
+        for i, line in enumerate(self.control.screen):
+            _put(screen, y, 1, "display" if i == 0 else "", width)
+            _put(screen, y, 11, line, width, curses.A_BOLD)
             y += 1
 
         # The LED blinks by the library's own pattern; the state is written next to it,
