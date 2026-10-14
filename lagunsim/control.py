@@ -154,7 +154,8 @@ class Control:
 
         A device with such a glass — the e-paper `epd` — shows what the glass shows, in its
         places, with the unit printed beside them (`ep4   21.4 °C`), and a line of its own
-        while a change waits for the next refresh (zadania/zrobione/DEVICE-04.md, N9). The
+        while a change waits for the next refresh (zadania/zrobione/DEVICE-04.md, N9) — on
+        a screen paced with a gap; `epd` refreshes at every write since 2026-10-14. The
         places and the pacing are the library's, the board's own."""
         lines = []
         device = self.runner.device

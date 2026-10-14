@@ -56,8 +56,8 @@ configuration `0c · Stack: hub + env + display` starts all three.
 
 `epd` is the board `devices/apps/epd` — the e-paper (`zadania/zrobione/DEVICE-04.md`):
 two fields, temperature and humidity, drawn as the glass draws them and refreshed as the
-board refreshes it — at once while the glass shows no number, otherwise at most once a
-minute, so a second change waits and the view says so. The hub's example configuration
+board refreshes it — every write at once as a partial refresh, a full one after ten
+(the whole glass flashes). The hub's example configuration
 has it as `kitchen-epd`, bound to the same sensor:
 `lagun-sim epd --uid 3031323334353637 --name kitchen-epd`.
 
@@ -112,7 +112,8 @@ root.
 Buttons for the inputs, lamps for the outputs, what each display field shows (`display`:
 a raw number with its quantity, a text in quotes, `--` for nothing — the scale and unit
 are a real device's to draw; `epd`: the glass itself, `21.4 °C` or `--.- %`, and a line
-while it waits for its refresh), what each sensor reads (`env`: in its unit, `-- failed`
+while it waits for its refresh — only on a screen paced with a gap, which `epd` no longer
+is), what each sensor reads (`env`: in its unit, `-- failed`
 after `x`), the device's traffic below. Write to a field from the hub's
 view: `Value` straight, `Text` goes as a `LONG_WRITE`.
 
