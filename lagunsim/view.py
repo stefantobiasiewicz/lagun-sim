@@ -12,6 +12,7 @@ a Raspberry Pi. The view only draws and forwards; what a click or a hold means i
     │  outputs  ● 1  ○ 2  ○ 3 …                                            │
     │  display  ep4  2137 TEMPERATURE      ← what each field shows          │
     │  sensors  ▸ ep4  21.50 °C            ← ↑↓ pick, + − change, x fail    │
+    │  knob     ep4  ████████░░░░  420 ‰   ← ←→ turn one detent             │
     │  status   ● READY                    ← the status LED, blinking       │
     │                                                                      │
     │ [  12.345] → EVENT  0x002 ep5 el 0x03  [00 01]                       │
@@ -163,6 +164,10 @@ class View:
         if ord("1") <= key <= ord("9"):
             self.selected = min(key - ord("1"), max(c.inputs - 1, 0))
             c.click(key - ord("1"))
+        elif key == curses.KEY_LEFT and c.dial_count:
+            c.turn(-1)  # a knob's arrows turn it; its one key needs no picking
+        elif key == curses.KEY_RIGHT and c.dial_count:
+            c.turn(+1)
         elif key == curses.KEY_LEFT:
             self.selected = max(self.selected - 1, 0)
         elif key == curses.KEY_RIGHT:
@@ -269,6 +274,11 @@ class View:
             _put(screen, y, 11, mark + line, width, curses.A_BOLD)
             y += 1
 
+        for i, line in enumerate(self.control.dials):
+            _put(screen, y, 1, "knob" if i == 0 else "", width)
+            _put(screen, y, 11, line, width, curses.A_BOLD)
+            y += 1
+
         # The LED blinks by the library's own pattern; the state is written next to it,
         # since a terminal redrawn 25 times a second shows a 100 ms flash only barely.
         lit = self.control.led
@@ -292,6 +302,11 @@ class View:
             keys = (
                 " fault:  r drop next response · b BUSY next request · s silent 10 s"
                 " · g drop a segment · c clear · any other key: back"
+            )
+        elif self.control.dial_count:
+            keys = (
+                " ←→ turn · 1 click · d double · t triple · space hold"
+                " · mouse: press & hold · s service · f faults · p power cut · q quit"
             )
         elif self.control.inputs:
             keys = (

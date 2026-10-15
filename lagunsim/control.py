@@ -13,7 +13,7 @@ from __future__ import annotations
 import heapq
 import itertools
 from collections.abc import Callable
-from typing import Final, NamedTuple
+from typing import ClassVar, Final, NamedTuple
 
 from lagunsim.runner import Runner
 
@@ -230,6 +230,36 @@ class Control:
             raw = None if failed else self._reading(sensor.endpoint, sensor.quantity)
             device.sense(sensor.endpoint, raw)
         self._fed = device
+
+    # --- knobs (types/0x0011-value-input.md) -------------------------------------------
+    #
+    # A board's interrupt counts detents and its loop hands the count to the library; here
+    # a key press is one detent. What the value does with it — the step, the limit, the
+    # wrap, the event and the report — is the library's (zadania/devices/DEVICE-02.md N9).
+
+    BAR: ClassVar[int] = 20
+    """Cells of the bar — a twentieth of the range each."""
+
+    @property
+    def dial_count(self) -> int:
+        return len(self.runner.device.dials)
+
+    def turn(self, detents: int, index: int = 0) -> None:
+        """Turn knob `index` by `detents`, negative down — handed in at the next loop."""
+        dials = self.runner.device.dials
+        if 0 <= index < len(dials):
+            self.runner.device.turn(dials[index].endpoint, detents)
+
+    @property
+    def dials(self) -> list[str]:
+        """Each knob's value as a bar over its range: `ep4  ████░░…  420 ‰`."""
+        lines = []
+        for dial in self.runner.device.dials:
+            span = max(dial.max_value - dial.min_value, 1)
+            filled = round((dial.value - dial.min_value) * self.BAR / span)
+            bar = "█" * filled + "░" * (self.BAR - filled)
+            lines.append(f"ep{dial.endpoint}  {bar}  {dial.value} ‰")
+        return lines
 
     @property
     def status(self) -> str | None:

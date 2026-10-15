@@ -354,3 +354,30 @@ def test_a_power_cut_keeps_the_reading(state: State) -> None:
     bus.take()
     run(control, clock, 5)
     assert "10108400#9808" in sent(bus)
+
+
+def test_the_arrows_turn_the_knob(state: State) -> None:
+    """`→` is one detent: `Changed` at once and the report with it, the value as a bar
+    (types/0x0011-value-input.md; zadania/devices/DEVICE-02.md N9)."""
+    control, bus, clock = rig("dial", state)
+    run(control, clock, 5)
+    bus.take()
+    control.turn(+1)
+    run(control, clock, 5)
+    assert sent(bus) == ["02108401#0014001400", "10108400#1400"]
+    assert control.dials == ["ep4  " + "░" * 20 + "  20 ‰"]
+    for _ in range(9):
+        control.turn(+1)
+        run(control, clock, 5)
+    assert control.dials == ["ep4  " + "█" * 4 + "░" * 16 + "  200 ‰"]
+
+
+def test_the_shaft_is_a_key(state: State) -> None:
+    """Input 1 is the key in the knob's shaft — a click as on any key."""
+    control, bus, clock = rig("dial", state)
+    run(control, clock, 5)
+    bus.take()
+    assert control.inputs == 1
+    control.click(0)
+    run(control, clock, 600)
+    assert "02108503#0001" in sent(bus)

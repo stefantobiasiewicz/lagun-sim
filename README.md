@@ -54,6 +54,23 @@ lagun-sim env     --uid 2021222324252627 --name kitchen-env
 (`zadania/zrobione/DEVICE-01.md` N2, N8); `x` — the sensor fails and the field shows `--`. In IntelliJ the hub's run
 configuration `0c · Stack: hub + env + display` starts all three.
 
+### A knob
+
+`dial` is the board `devices/apps/dial` (`zadania/devices/DEVICE-02.md`) — an encoder's
+value on ep4 (`ValueInput`, 20 ‰ a detent) and the key in its shaft on ep5 (`KeyInput`,
+multi-click and hold), one channel. `←` `→` turn it a detent at a time and the value shows
+as a bar; `1` clicks the shaft. The hub's example configuration toggles `kitchen-relay`
+with the shaft's click:
+
+```sh
+lagun-sim output --uid 08090a0b0c0d0e0f --name kitchen-relay
+lagun-sim dial   --uid 5051525354555657 --name kitchen-dial
+```
+
+Each detent is a `Changed` at once and a report at most once a second (`ReportMinGap`).
+The value would dim a light through `SetLevel(level: $value)` (`hub/KONFIGURACJA.md` §5),
+but no simulated output has `LEVEL` yet (`zadania/devices/DEVICE-03.md`).
+
 `epd` is the board `devices/apps/epd` — the e-paper (`zadania/zrobione/DEVICE-04.md`):
 two fields, temperature and humidity, drawn as the glass draws them and refreshed as the
 board refreshes it — every write at once as a partial refresh, a full one after ten
@@ -120,7 +137,7 @@ view: `Value` straight, `Text` goes as a `LONG_WRITE`.
 | | |
 |---|---|
 | `1` … `9` | click that input (a press held 80 ms) |
-| `←` `→`, `Enter` | pick an input, click it |
+| `←` `→`, `Enter` | pick an input, click it — on a knob (`dial`) `←` `→` turn it one detent instead |
 | `d`, `t` | double, triple click on the picked input |
 | `space` | press the picked input and keep it pressed; again to let go (`*` marks it) |
 | mouse | press on a button and hold — released when you let go |
