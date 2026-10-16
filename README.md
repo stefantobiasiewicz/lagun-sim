@@ -56,7 +56,7 @@ configuration `0c · Stack: hub + env + display` starts all three.
 
 ### A knob
 
-`dial` is the board `devices/apps/dial` (`zadania/devices/DEVICE-02.md`) — an encoder's
+`dial` is the board `devices/apps/dial` (`zadania/zrobione/DEVICE-02.md`) — an encoder's
 value on ep4 (`ValueInput`, 20 ‰ a detent) and the key in its shaft on ep5 (`KeyInput`,
 multi-click and hold), one channel. `←` `→` turn it a detent at a time and the value shows
 as a bar; `1` clicks the shaft. The hub's example configuration toggles `kitchen-relay`

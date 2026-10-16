@@ -358,7 +358,7 @@ def test_a_power_cut_keeps_the_reading(state: State) -> None:
 
 def test_the_arrows_turn_the_knob(state: State) -> None:
     """`→` is one detent: `Changed` at once and the report with it, the value as a bar
-    (types/0x0011-value-input.md; zadania/devices/DEVICE-02.md N9)."""
+    (types/0x0011-value-input.md; zadania/zrobione/DEVICE-02.md N9)."""
     control, bus, clock = rig("dial", state)
     run(control, clock, 5)
     bus.take()

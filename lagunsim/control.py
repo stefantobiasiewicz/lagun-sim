@@ -235,7 +235,7 @@ class Control:
     #
     # A board's interrupt counts detents and its loop hands the count to the library; here
     # a key press is one detent. What the value does with it — the step, the limit, the
-    # wrap, the event and the report — is the library's (zadania/devices/DEVICE-02.md N9).
+    # wrap, the event and the report — is the library's (zadania/zrobione/DEVICE-02.md N9).
 
     BAR: ClassVar[int] = 20
     """Cells of the bar — a twentieth of the range each."""
