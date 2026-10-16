@@ -10,7 +10,7 @@ from lagunbus_node.frame import Frame
 from lagunbus_node.memory import QueueTransport
 from lagunbus_node.sim import SimDevice
 
-from lagunsim.control import CLICK_MS, Control
+from lagunsim.control import CLICK_MS, Control, Light
 from lagunsim.runner import Runner
 from lagunsim.state import State, StateError
 
@@ -381,3 +381,27 @@ def test_the_shaft_is_a_key(state: State) -> None:
     control.click(0)
     run(control, clock, 600)
     assert "02108503#0001" in sent(bus)
+
+
+def test_a_light_shows_how_it_shines(tmp_path: Path) -> None:
+    """`rgb8` (zadania/devices/DEVICE-03.md N8): dark in its remembered white, then `On`
+    fades in over DefaultFadeTime — `fading` while it does — and a colour with White
+    shows White added to R, G and B, as the board without a white LED lights it."""
+    control, bus, clock = rig(
+        "rgb8", State.open("strip", "rgb8", fresh=False, root=tmp_path, uid=UID)
+    )
+    assert control.lights == [Light((0, 0, 0), "0 %  #FEFEFE")]
+    bus.inbox.append(Frame(0x06108401, b"\x01"))  # On
+    run(control, clock, 200)
+    assert control.lights[0].text.endswith("fading")
+    run(control, clock, 300)
+    assert control.lights == [Light((254, 254, 254), "100 %  #FEFEFE")]
+    set_color = Frame(0x06108406, bytes([2, 100, 0, 0, 50, 0, 0]))  # SetColor(100,0,0,50,0)
+    bus.inbox.append(set_color)
+    run(control, clock, 2)
+    assert control.lights == [Light((150, 50, 50), "100 %  #640000 W 50")]
+
+
+def test_a_relay_is_no_light(tmp_path: Path) -> None:
+    control, _, _ = faulty_relay(tmp_path)
+    assert control.lights == []

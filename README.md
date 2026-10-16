@@ -68,8 +68,24 @@ lagun-sim dial   --uid 5051525354555657 --name kitchen-dial
 ```
 
 Each detent is a `Changed` at once and a report at most once a second (`ReportMinGap`).
-The value would dim a light through `SetLevel(level: $value)` (`hub/KONFIGURACJA.md` §5),
-but no simulated output has `LEVEL` yet (`zadania/devices/DEVICE-03.md`).
+The value dims `kitchen-strip` through `SetLevel(level: $value)` (`hub/KONFIGURACJA.md` §5).
+
+### A colour light
+
+`rgb8` is the board `devices/apps/rgb8` (`zadania/devices/DEVICE-03.md`) — eight WS2812 as
+one `Output` with `LEVEL | COLOR_RGB` on ep4. The `light` row paints eight cells in the
+colour it shines (on a 256-colour terminal; else bright or dim), with the level, the colour
+and `fading` while a transition runs. Nothing to press: it is driven from the hub — `t`
+`o` `f` in its view, `c` for `SetLevel`/`SetColor` with arguments, or the knob:
+
+```sh
+lagun-sim rgb8 --uid 6061626364656667 --name kitchen-strip
+lagun-sim dial --uid 5051525354555657 --name kitchen-dial
+```
+
+What it shows is the intent the library hands the board: the colour at full brightness
+times `Level`, White added to R, G and B. The board's own brightness curve and current cap
+(80/255) are not drawn — they would only darken the picture.
 
 `epd` is the board `devices/apps/epd` — the e-paper (`zadania/zrobione/DEVICE-04.md`):
 two fields, temperature and humidity, drawn as the glass draws them and refreshed as the

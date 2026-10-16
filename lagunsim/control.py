@@ -17,6 +17,14 @@ from typing import ClassVar, Final, NamedTuple
 
 from lagunsim.runner import Runner
 
+
+class Light(NamedTuple):
+    """One light for the view: the colour to paint, 0–254 a channel, and its line."""
+
+    shown: tuple[int, int, int]
+    text: str
+
+
 CLICK_MS: Final = 80
 """How long a click holds the button: past the 15 ms bounce window with room to spare,
 far below any hold threshold (the type allows 200 ms and up)."""
@@ -260,6 +268,30 @@ class Control:
             bar = "█" * filled + "░" * (self.BAR - filled)
             lines.append(f"ep{dial.endpoint}  {bar}  {dial.value} ‰")
         return lines
+
+    @property
+    def lights(self) -> list[Light]:
+        """Each light as it shines (zadania/devices/DEVICE-03.md N8): the colour the eye
+        would see — White added to R, G and B as a board without a white LED does it,
+        times `Level` — and a line `62.5 %  #FE8000  fading`. The colour is the INTENT
+        the library handed over: a board's brightness curve and current cap are its own
+        and would only darken the picture here. Only lights; a relay stays a lamp ●."""
+        device = self.runner.device
+        lights = []
+        for i in range(device.output_count):
+            lit = device.light(i)
+            if lit is None:
+                continue
+            level, *rgbw = lit
+            white = rgbw[3]
+            shown = tuple(min(254, c + white) * level // 1000 for c in rgbw[:3])
+            text = f"{level / 10:g} %  #" + "".join(f"{c:02X}" for c in rgbw[:3])
+            if white:
+                text += f" W {white}"
+            if device.light_fading(i):
+                text += "  fading"
+            lights.append(Light(shown, text))  # type: ignore[arg-type]
+        return lights
 
     @property
     def status(self) -> str | None:

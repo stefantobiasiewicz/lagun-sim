@@ -10,6 +10,7 @@ a Raspberry Pi. The view only draws and forwards; what a click or a hold means i
     │                                                                      │
     │  inputs   [ 1 ]  [ 2 ]  [ 3 ]        ← mouse: press and hold          │
     │  outputs  ● 1  ○ 2  ○ 3 …                                            │
+    │  light    ████████  62.5 %  #FE8000  fading  ← in its colour (256)   │
     │  display  ep4  2137 TEMPERATURE      ← what each field shows          │
     │  sensors  ▸ ep4  21.50 °C            ← ↑↓ pick, + − change, x fail    │
     │  knob     ep4  ████████░░░░  420 ‰   ← ←→ turn one detent             │
@@ -44,6 +45,15 @@ REDRAW_S: Final = 0.04
 LOG_LINES: Final = 500
 
 BUTTON_W: Final = 7  # "[ 1 ]" plus a gap
+LIGHT_CELLS: Final = 8  # as rgb8's eight WS2812 — any light is drawn so
+LIGHT_PAIR: Final = 10  # the first colour pair of the lights, one a light
+
+
+def xterm256(rgb: tuple[int, int, int]) -> int:
+    """The nearest colour of the xterm 6×6×6 cube — what a 256-colour terminal can show;
+    curses has no true colour."""
+    r, g, b = (round(c * 5 / 254) for c in rgb)
+    return 16 + 36 * r + 6 * g + b
 
 
 @dataclass
@@ -231,6 +241,15 @@ class View:
 
     # --- drawing -------------------------------------------------------------------------
 
+    def _paint(self, rgb: tuple[int, int, int], pair: int) -> int:
+        """The attribute to draw a light in: its colour where the terminal has 256, else
+        bright for lit and dim for dark."""
+        if curses.has_colors() and curses.COLORS >= 256:
+            with contextlib.suppress(curses.error):
+                curses.init_pair(pair, xterm256(rgb), -1)
+                return curses.color_pair(pair)
+        return curses.A_BOLD if any(rgb) else curses.A_DIM
+
     def _draw(self, screen: curses.window) -> None:
         screen.erase()
         height, width = screen.getmaxyx()
@@ -255,12 +274,19 @@ class View:
                 label = f"[ {i + 1} ]" + ("*" if self.control.is_held(i) else " ")
                 _put(screen, y, self._buttons_x + i * BUTTON_W, label, width, attr)
             y += 1
-        if device.output_count:
+        relays = [i for i in range(device.output_count) if device.light(i) is None]
+        if relays:
             _put(screen, y, 1, "outputs", width)
-            for i in range(device.output_count):
+            for n, i in enumerate(relays):
                 on = device.output_on(i)
                 lamp = f"{'●' if on else '○'} {i + 1}"
-                _put(screen, y, 11 + i * BUTTON_W, lamp, width, self._on if on else curses.A_DIM)
+                _put(screen, y, 11 + n * BUTTON_W, lamp, width, self._on if on else curses.A_DIM)
+            y += 1
+
+        for n, light in enumerate(self.control.lights):
+            _put(screen, y, 1, "light" if n == 0 else "", width)
+            _put(screen, y, 11, "█" * LIGHT_CELLS, width, self._paint(light.shown, LIGHT_PAIR + n))
+            _put(screen, y, 12 + LIGHT_CELLS, light.text, width, curses.A_BOLD)
             y += 1
 
         for i, line in enumerate(self.control.screen):
