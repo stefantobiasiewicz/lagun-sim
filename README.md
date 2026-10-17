@@ -72,7 +72,7 @@ The value dims `kitchen-strip` through `SetLevel(level: $value)` (`hub/KONFIGURA
 
 ### A colour light
 
-`rgb8` is the board `devices/apps/rgb8` (`zadania/devices/DEVICE-03.md`) — eight WS2812 as
+`rgb8` is the board `devices/apps/rgb8` (`zadania/zrobione/DEVICE-03.md`) — eight WS2812 as
 one `Output` with `LEVEL | COLOR_RGB` on ep4. The `light` row paints eight cells in the
 colour it shines (on a 256-colour terminal; else bright or dim), with the level, the colour
 and `fading` while a transition runs. Nothing to press: it is driven from the hub — `t`

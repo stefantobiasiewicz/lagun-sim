@@ -271,7 +271,7 @@ class Control:
 
     @property
     def lights(self) -> list[Light]:
-        """Each light as it shines (zadania/devices/DEVICE-03.md N8): the colour the eye
+        """Each light as it shines (zadania/zrobione/DEVICE-03.md N8): the colour the eye
         would see — White added to R, G and B as a board without a white LED does it,
         times `Level` — and a line `62.5 %  #FE8000  fading`. The colour is the INTENT
         the library handed over: a board's brightness curve and current cap are its own

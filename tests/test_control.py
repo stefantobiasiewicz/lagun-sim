@@ -384,7 +384,7 @@ def test_the_shaft_is_a_key(state: State) -> None:
 
 
 def test_a_light_shows_how_it_shines(tmp_path: Path) -> None:
-    """`rgb8` (zadania/devices/DEVICE-03.md N8): dark in its remembered white, then `On`
+    """`rgb8` (zadania/zrobione/DEVICE-03.md N8): dark in its remembered white, then `On`
     fades in over DefaultFadeTime — `fading` while it does — and a colour with White
     shows White added to R, G and B, as the board without a white LED lights it."""
     control, bus, clock = rig(
